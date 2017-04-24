@@ -1,0 +1,7 @@
+.vscode
+playground
+node_modules
+todos.txt
+npm-debug.log
+old-steps.md
+new-steps.txt
