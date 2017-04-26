@@ -1,20 +1,23 @@
 'use strict';
 
-function Task (taskFn, flow) {
-	this.fn   = taskFn;
-	this.ctx  = taskFn.ctx || flow;
-	this.flow = flow;
-	this.data = flow.data;
+function Task (taskFn) {
+	this.fn  = taskFn;
+	this.ctx = taskFn.ctx || null;
 }
 
 const proto = Task.prototype;
 
+proto.go = function (caller, ...params) {
+
+};
+
+
 proto.error = function (err) {
-	this.flow.error(err);
+	this.owner.error(err);
 };
 
 proto.done = function (passData) {
-	this.flow.taskDone(passData);
+	this.owner.taskDone(passData);
 };
 
 module.exports = Task;

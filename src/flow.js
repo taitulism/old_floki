@@ -2,17 +2,13 @@
 
 const Task = require('./task');
 
-function addToQ (flow, taskFn) {
-	if (typeof taskFn !== 'function') {
-		throw new Error('addToQ called with a non-function argument');
-	}
-
-	const taskObj = new Task(taskFn, flow);
-
-	return flow.q.push(taskObj);
+function addToQ (flow, rawTasks) {
+	const tasks = rawTasks.map((rawTask) => new Task(rawTask, flow));
+	
+	flow.q.push(tasks);
 }
 
-function Flow () {
+function Flow (cluster) {
 	this.q     = [];
 	this.err   = null;
 	this.index = 0;
@@ -23,15 +19,14 @@ module.exports = Flow;
 
 const proto = Flow.prototype;
 
-
-proto.run = function (task) {
-	addToQ(this, task);
+proto.run = function (...tasks) {
+	addToQ(this, tasks);
 
 	return this;
 };
 
-proto.then = function (task) {
-	addToQ(this, task);
+proto.then = function (...tasks) {
+	addToQ(this, tasks);
 
 	return this;
 };
@@ -48,7 +43,7 @@ proto.go = function (passData, final) {
 
 	this.final = final;
 
-	this.runNextTask(passData);
+	this.runNext(passData);
 };
 
 proto.moveIndex = function () {
@@ -61,25 +56,29 @@ proto.moveIndex = function () {
 	return false;
 };
 
-proto.runNextTask = function (passData) {
+proto.runNext = function (passData) {
 	const task = this.q[this.index];
 
-	if (!task) {
+	if (!task || !this.moveIndex()) {
 		return this.final(this.err, this.data);
 	}
 	
-	if (this.moveIndex()) {
+	if (typeof task === 'function') {
 		const {fn, ctx} = task;
-		
+	
 		fn.call(ctx, task, passData);	
 	}
-	else {
-		this.final(this.err, this.data);
+	else { // array of task objects
+		task.forEach((tsk) => {
+			const {fn, ctx} = tsk;
+
+			fn.call(ctx, tsk, passData);	
+		});
 	}
 };
 
 proto.taskDone = function (passData) {
-	this.runNextTask(passData);
+	this.runNext(passData);
 };
 
 
