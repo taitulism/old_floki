@@ -1,5 +1,13 @@
 'use strict';
 
+const createRC = require('./private-methods').createRC;
+
+function Cluster (tasks, len) {
+	this.err   = null;
+	this.tasks = tasks;
+	this.len   = len;
+	this.RC    = createRC(this);
+}
 
 function cluster (...tasks) {
 	const len = tasks.length;
@@ -20,12 +28,6 @@ function cluster (...tasks) {
 
 module.exports = cluster;
 
-function Cluster (tasks, len) {
-	this.err   = null;
-	this.tasks = tasks;
-	this.len   = len;
-	this.RC    = createRC(this);
-}
 
 const proto = Cluster.prototype;
 
@@ -37,7 +39,7 @@ proto.checkError = function (err) {
 	this.callback(err);
 };
 
-proto.taskDone = function (err, data) {
+proto.next = function (err, data) {
 	this.checkError(err);
 	
 	if (this.err) return;
@@ -51,22 +53,8 @@ proto.taskDone = function (err, data) {
 	}
 };
 
-
-
 proto.runAllTasks = function (params) {
 	this.tasks.forEach((task) => {
 		task(params, this.RC);
 	});
-}
-
-function remoteControl (err, data) {
-	this.taskDone(err, data);
-}
-
-function createRC (flow) {
-	const RC = remoteControl.bind(flow);
-
-	RC.flow = true;
-
-	return RC;
 }
