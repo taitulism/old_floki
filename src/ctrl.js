@@ -1,23 +1,23 @@
 'use strict';
 
-function Ctrl (HQ) {
-	this.HQ = HQ;
+function Cluster (tasks, len, flow) {
+	this.index = -1;
 
-	this.data = Object.create(null);
+	this.tasks = tasks;
+	this.len   = len;
+	this.flow = flow;
+
+	this.data = flow.data || Object.create(null);
 }
 
-const proto = Ctrl.prototype;
+const proto = Cluster.prototype;
 
-proto.error = function () {
-	this.HQ.error(this.err);
+proto.error = function (err) {
+	this.flow.error(err);
 };
 
-proto.done = function () {
-	const allDone = Boolean(++this.index === this.len);
-
-	if (allDone) {
-		this.owner.done(this.data);
-	}
+proto.done = function (params) {
+	this.flow.next(this.data);
 };
 
-module.exports = Ctrl;
+module.exports = Cluster;

@@ -1,16 +1,66 @@
 'use strict';
 
-const Ctrl = require('./ctrl');
+// const Ctrl = require('./ctrl');
+
+function Ctrl (tasks, len, owner) {
+	this.index = -1;
+
+	this.tasks = tasks;
+	this.len   = len;
+	this.owner = owner;
+
+	this.data = Object.create(null);
+}
+
+const proto = Ctrl.prototype;
+
+proto.error = function () {
+	this.owner.error(this.err);
+};
+
+proto.done = function () {
+	const noMoreTasks = Boolean(this.index === this.len);
+
+	if (noMoreTasks) {
+		this.owner.done(this.data);
+	}
+};
 
 
-function series (...tasks) {
+function remoteControl (err, data) {
+	if (err) {
+		return this.error(err);
+	}
+
+	this.done(data);
+}
+
+function createRC (flow) {
+	const RC = remoteControl.bind(flow);
+
+	RC.flow = true;
+
+	return RC;
+}
+
+
+
+function cluster (...tasks) {
 	const len = tasks.length;
 	
 	return function (params, owner) {
 		const ctrl = new Ctrl(tasks, len, owner);
 
-		next(params, ctrl);
+		runTasks(params, createRC(owner));
 	};
+}
+
+function runTasks (params, ctrl) {
+	ctrl.index++;
+
+	ctrl.tasks.forEach((task) => {
+		task(params, ctrl);
+	});
 }
 
 
@@ -22,7 +72,7 @@ function asyncFn1 (path, cb) {
 	setTimeout(() => {
 		console.log(1);
 		cb(null, 'asyncFn1')
-	}, 1000);
+	}, 101);
 }
 
 function asyncFn2 (content, cb) {
@@ -66,8 +116,9 @@ function wrapper3 (params, task) {
 
 
 
-const buildCSS = series(wrapper1, wrapper2, wrapper3)
+const buildCSS = cluster(wrapper1, wrapper2, wrapper3)
 
+// buildCSS({params}, owner)
 buildCSS({p1:11, p2:22, p3:33}, {
 	ctx:true, 
 	error: function (err) {
@@ -77,3 +128,6 @@ buildCSS({p1:11, p2:22, p3:33}, {
 		console.log('data:', data);
 	}
 })
+
+
+module.exports = cluster;

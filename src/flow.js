@@ -1,138 +1,78 @@
 'use strict';
 
-const Task = require('./task');
+function flow (tasks, len) {
+	const _flow = new Flow(tasks, len);
 
-function addToQ (flow, rawTasks) {
-	const tasks = rawTasks.map((rawTask) => new Task(rawTask, flow));
-	
-	flow.q.push(tasks);
+	return function (params, callback) {
+		const cbType = typeof callback;
+		
+		if (cbType === 'function') {
+			_flow.callback = callback;
+			_flow.next(null, params);
+		}
+		else if (cbType === 'object') {
+			console.log('object!!!');
+		}
+		else {
+			throw new Error('callback should be a function')
+		}
+	};
 }
 
-function Flow (cluster) {
-	this.q     = [];
+function Flow (tasks, len, owner) {
 	this.err   = null;
-	this.index = 0;
-	this.data  = Object.create(null);
-}
+	this.index = -1;
 
-module.exports = Flow;
+	this.tasks = tasks;
+	this.len   = len;
+	this.owner = owner || null;
+
+	this.RC   = createRC(this);
+	this.data = owner ? owner.data : Object.create(null);
+}
 
 const proto = Flow.prototype;
 
-proto.run = function (...tasks) {
-	addToQ(this, tasks);
+proto.checkError = function (err) {
+	if (!err || this.err) return;
 
-	return this;
-};
-
-proto.then = function (...tasks) {
-	addToQ(this, tasks);
-
-	return this;
-};
-
-proto.go = function (passData, final) {
-	if (typeof passData === 'function') {
-		final    = passData;
-		passData = Object.create(null);
-	}
-
-	if (typeof final !== 'function') {
-		throw new Error('floki.go() must have a final callback function.');
-	}
-
-	this.final = final;
-
-	this.runNext(passData);
-};
-
-proto.moveIndex = function () {
-	this.index += 1;
-
-	if (this.index <= this.q.length) {
-		return true;
-	}
-
-	return false;
-};
-
-proto.runNext = function (passData) {
-	const task = this.q[this.index];
-
-	if (!task || !this.moveIndex()) {
-		return this.final(this.err, this.data);
-	}
+	this.err = err;
 	
-	if (typeof task === 'function') {
-		const {fn, ctx} = task;
+	this.callback(err);
+};
+
+proto.next = function (err, data) {
+	this.checkError(err);
 	
-		fn.call(ctx, task, passData);	
-	}
-	else { // array of task objects
-		task.forEach((tsk) => {
-			const {fn, ctx} = tsk;
+	if (this.err) return;
 
-			fn.call(ctx, tsk, passData);	
-		});
+	this.index++;
+
+	const {tasks, index} = this;
+
+	const nextTask = tasks[index];
+
+	if (nextTask && typeof nextTask === 'function') {
+		nextTask(data, this.RC);
+	}
+	else if (this.owner) {
+		this.owner.done(data);
+	}
+	else {
+		this.callback(null, data);
 	}
 };
 
-proto.taskDone = function (passData) {
-	this.runNext(passData);
-};
+module.exports = flow;
 
+function remoteControl (err, data) {
+	this.next(err, data);
+}
 
+function createRC (flow) {
+	const RC = remoteControl.bind(flow);
 
+	RC.flow = true;
 
-
-
-
-
-
-
-
-proto.whois = 'Floki';
-
-
-
-
-proto.end = function (cb) {
-	if (typeof cb === 'function') {
-		this.finalCallback = cb;
-		
-		return this;
-	}
-
-	throw new Error('floki must have a final callback function. called .end('+ typeof cb +')')
-};
-
-
-proto.runAll = function (...tasks) {
-	let counter = tasks.length;
-
-	tasks.forEach((task, i) => {
-		const taskType = typeof task;
-		
-		if (taskType !== 'function' && taskType !== 'object') {
-			throw new Error('flow callback is not a function.')
-		}
-
-		callTask(task, taskType, this)
-
-		counter -= 1;
-
-		if (counter === 0) {
-			cb(this.err, this.data);
-		}
-	});	
-};
-
-
-function callTask (task, taskType, ctx) {
-	if (taskType === 'function') {
-		task.call(ctx);
-	}
-	else if (taskType === 'object' && task.whois === 'Floki') {
-		task.go(this.data, this.taskDone)
-	}
+	return RC;
 }
