@@ -5,5 +5,41 @@
 
 Floki
 =====
-Flow control for node.
+Flow control for Node js.
+
+```js
+const floki = require('floki');
+
+function myStandardAsyncFn (pathToFile, callback) {
+	setTimeout(() => {
+		callback(null, 'asyncFn5');
+	}, 100);
+}
+
+function taskWrapper (params, callback) {
+	myStandardAsyncFn(params.pathToFile, callback);
+}
+
+// build queue
+const queue = floki()
+	.run(taskWrapper)
+	.then(taskWrapper, taskWrapper) // <-- 2 in parallel
+	.then(taskWrapper)
+
+// one queue for multiple calls (run)
+const flow = queue.flow();
+
+// run flow
+flow(params, callback);
+```
+
+
+
+
+
+
+
+
+
+
 
