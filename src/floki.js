@@ -1,21 +1,21 @@
 'use strict';
 
-const flow    = require('./flow');
 const cluster = require('./cluster');
+const flow    = require('./flow');
+
+
+module.exports = function floki () {
+	return new Floki();
+};
 
 function Floki () {
 	this.tasks = [];
 	this.len   = 0;
 }
 
-function floki () {
-	return new Floki();
-}
-
-module.exports = floki;
-
 
 const proto = Floki.prototype;
+
 
 proto.run = function (task, ...tasks) {
 	addToQ(this, task, ...tasks);
@@ -23,11 +23,13 @@ proto.run = function (task, ...tasks) {
 	return this;
 };
 
+
 proto.then = function (task, ...tasks) {
 	addToQ(this, task, ...tasks);
 
 	return this;
 };
+
 
 proto.flow = function () {
 	return flow(this.tasks, this.len);

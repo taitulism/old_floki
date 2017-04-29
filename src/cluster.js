@@ -1,6 +1,26 @@
 'use strict';
 
-const createRC = require('./private-methods').createRC;
+const {
+	createRC,
+	checkError,
+	runAllTasks,
+	isArrayOfFns,
+} = require('./private-methods');
+
+
+module.exports = function createCluster (...tasks) {
+	const len = tasks.length;
+
+	isArrayOfFns(tasks);
+
+	const cluster = new Cluster(tasks, len);
+	
+	return function (params, callback) {
+		cluster.callback = callback;
+		runAllTasks(cluster, params);
+	};
+};
+
 
 function Cluster (tasks, len) {
 	this.err   = null;
@@ -9,38 +29,9 @@ function Cluster (tasks, len) {
 	this.RC    = createRC(this);
 }
 
-function cluster (...tasks) {
-	const len = tasks.length;
 
-	tasks.forEach((task) => {
-		if (typeof task !== 'function')  {
-			throw new Error('task should be a function');
-		}
-	});
-
-	const _cluster = new Cluster(tasks, len);
-	
-	return function (params, callback) {
-		_cluster.callback = callback;
-		_cluster.runAllTasks(params);
-	};
-}
-
-module.exports = cluster;
-
-
-const proto = Cluster.prototype;
-
-proto.checkError = function (err) {
-	if (!err || this.err) return;
-
-	this.err = err;
-	
-	this.callback(err);
-};
-
-proto.next = function (err, data) {
-	this.checkError(err);
+Cluster.prototype.next = function (err, data) {
+	checkError(this, err);
 	
 	if (this.err) return;
 
@@ -52,9 +43,3 @@ proto.next = function (err, data) {
 		this.callback(err, data);
 	}
 };
-
-proto.runAllTasks = function (params) {
-	this.tasks.forEach((task) => {
-		task(params, this.RC);
-	});
-}

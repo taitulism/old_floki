@@ -146,8 +146,8 @@ module.exports = {
             "property"
         ],
         "func-names": [
-            "error",
-            "never"
+            "off",
+            "as-needed"
         ],
         "func-style": [
             "error",

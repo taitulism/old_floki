@@ -1,6 +1,7 @@
 'use strict';
 
-const createRC = require('./private-methods').createRC;
+const {createRC, checkError} = require('./private-methods');
+
 
 function Flow (tasks, len, owner) {
 	this.err   = null;
@@ -15,15 +16,15 @@ function Flow (tasks, len, owner) {
 }
 
 
-function flow (tasks, len) {
-	const _flow = new Flow(tasks, len);
+module.exports = function createFlow (tasks, len) {
+	const flow = new Flow(tasks, len);
 
 	return function (params, callback) {
 		const cbType = typeof callback;
 		
 		if (cbType === 'function') {
-			_flow.callback = callback;
-			_flow.next(null, params);
+			flow.callback = callback;
+			flow.next(null, params);
 		}
 		else if (cbType === 'object') {
 			console.log('object!!!');
@@ -32,23 +33,11 @@ function flow (tasks, len) {
 			throw new Error('callback should be a function');
 		}
 	};
-}
-
-module.exports = flow;
-
-
-const proto = Flow.prototype;
-
-proto.checkError = function (err) {
-	if (!err || this.err) return;
-
-	this.err = err;
-	
-	this.callback(err);
 };
 
-proto.next = function (err, data) {
-	this.checkError(err);
+
+Flow.prototype.next = function (err, data) {
+	checkError(this, err);
 	
 	if (this.err) return;
 
@@ -62,7 +51,7 @@ proto.next = function (err, data) {
 		nextTask(data, this.RC);
 	}
 	else if (this.owner) {
-		this.owner.done(data);
+		this.owner.next(null, data);
 	}
 	else {
 		this.callback(null, data);
