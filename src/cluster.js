@@ -3,7 +3,6 @@
 const {
 	createRC,
 	checkError,
-	runAllTasks,
 	isArrayOfFns,
 } = require('./private-methods');
 
@@ -43,3 +42,10 @@ Cluster.prototype.next = function (err, data) {
 		this.callback(err, data);
 	}
 };
+
+
+function runAllTasks (cluster, params) {
+	cluster.tasks.forEach((task) => {
+		task(params, cluster.RC);
+	});
+}

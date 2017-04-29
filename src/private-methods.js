@@ -2,7 +2,6 @@
 
 module.exports.createRC     = createRC;
 module.exports.checkError   = checkError;
-module.exports.runAllTasks  = runAllTasks;
 module.exports.isArrayOfFns = isArrayOfFns;
 
 
@@ -24,13 +23,6 @@ function checkError (flow, err) {
 	flow.err = err;
 	
 	flow.callback(err);
-}
-
-
-function runAllTasks (cluster, params) {
-	cluster.tasks.forEach((task) => {
-		task(params, cluster.RC);
-	});
 }
 
 
