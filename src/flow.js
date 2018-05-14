@@ -1,6 +1,5 @@
-'use strict';
 
-const {createRC, checkError} = require('./private-methods');
+const {createDone, checkError} = require('./private-methods');
 
 
 function Flow (tasks, len, owner) {
@@ -11,7 +10,7 @@ function Flow (tasks, len, owner) {
 	this.len   = len;
 	this.owner = owner || null;
 
-	this.RC   = createRC(this);
+	this.done = createDone(this);
 	this.data = owner ? owner.data : Object.create(null);
 }
 
@@ -19,24 +18,22 @@ function Flow (tasks, len, owner) {
 module.exports = function createFlow (tasks, len) {
 	const flow = new Flow(tasks, len);
 
-	return function (params, callback) {
+	return function runFlow (cfg, data, callback) {
 		const cbType = typeof callback;
 		
 		if (cbType === 'function') {
 			flow.callback = callback;
-			flow.next(null, params);
-		}
-		else if (cbType === 'object') {
-			console.log('object!!!');
+			flow.data = data;
+			flow.next(null, cfg);
 		}
 		else {
-			throw new Error('callback should be a function');
+			throw new TypeError('callback should be a function');
 		}
 	};
 };
 
 
-Flow.prototype.next = function (err, data) {
+Flow.prototype.next = function (err, cfg) {
 	checkError(this, err);
 	
 	if (this.err) return;
@@ -48,12 +45,12 @@ Flow.prototype.next = function (err, data) {
 	const nextTask = tasks[index];
 
 	if (nextTask && typeof nextTask === 'function') {
-		nextTask(data, this.RC);
+		nextTask(cfg, this.data, this.done);
 	}
 	else if (this.owner) {
-		this.owner.next(null, data);
+		this.owner.next(null, this.data);
 	}
 	else {
-		this.callback(null, data);
+		this.callback(null, this.data);
 	}
 };

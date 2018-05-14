@@ -1,4 +1,3 @@
-'use strict';
 
 const cluster = require('./cluster');
 const flow    = require('./flow');
@@ -31,7 +30,7 @@ proto.then = function (task, ...tasks) {
 };
 
 
-proto.flow = function () {
+proto.createFlow = function () {
 	return flow(this.tasks, this.len);
 };
 

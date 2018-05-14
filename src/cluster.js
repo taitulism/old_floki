@@ -1,7 +1,6 @@
-'use strict';
 
 const {
-	createRC,
+	createDone,
 	checkError,
 	isArrayOfFns,
 } = require('./private-methods');
@@ -14,9 +13,9 @@ module.exports = function createCluster (...tasks) {
 
 	const cluster = new Cluster(tasks, len);
 	
-	return function (params, callback) {
+	return function runCluster (cfg, callback) {
 		cluster.callback = callback;
-		runAllTasks(cluster, params);
+		runAllTasks(cluster, cfg);
 	};
 };
 
@@ -25,7 +24,7 @@ function Cluster (tasks, len) {
 	this.err   = null;
 	this.tasks = tasks;
 	this.len   = len;
-	this.RC    = createRC(this);
+	this.done  = createDone(this);
 }
 
 
@@ -44,8 +43,10 @@ Cluster.prototype.next = function (err, data) {
 };
 
 
-function runAllTasks (cluster, params) {
-	cluster.tasks.forEach((task) => {
-		task(params, cluster.RC);
+function runAllTasks (cluster, cfg) {
+	const {tasks, data, done} = cluster;
+
+	tasks.forEach((task) => {
+		task(cfg, data, done);
 	});
 }

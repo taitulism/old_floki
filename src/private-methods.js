@@ -1,6 +1,5 @@
-'use strict';
 
-module.exports.createRC     = createRC;
+module.exports.createDone   = createRC;
 module.exports.checkError   = checkError;
 module.exports.isArrayOfFns = isArrayOfFns;
 
